@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: quagga
+  namespace: kube-system
+  labels:
+    k8s-app: quagga
+spec:
+  template:
+    metadata:
+      name: quagga
+      labels:
+        k8s-app: quagga
+    spec:
+      nodeSelector:
+        _NODE_LABEL_: _LABEL_ 
+      hostNetwork: true
+      imagePullSecrets:
+      - name: _SECRETS_ 
+      containers:
+      - name: quagga
+        image: _YOUR_REPO_/quagga:v0.1
+        securityContext:
+          privileged: true
+        command: ["/bin/bash"]
+        args: ["/etc/quagga/change_quagga_config.sh"]
