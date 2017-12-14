@@ -15,7 +15,9 @@ func getIfname(ifnumber string) string {
 	return strings.Replace(string(response), "\"", "", -1)
 }
 
-func main() {
+func getIfnameIp() map[string]string {
+	var ifname_ip map[string]string
+	ifname_ip = make(map[string]string)
 	response, err := exec.Command("get_ip.sh").Output()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -24,13 +26,16 @@ func main() {
 	for _, j := range strings.Split(ip, "\n") {
 		for m, n := range strings.Split(j, " ") {
 			if m%2 == 1 {
-				fmt.Println(n)
-				ifname := getIfname(n)
-				fmt.Println(ifname)
+				ifnames := getIfname(n)
+				ifname := strings.Replace(ifnames, "\n", "", -1)
+				ifname_ip[ifname] = strings.Split(j, " ")[0]
 			}
-			//fmt.Println(n)
-			//fmt.Println(reflect.TypeOf(m))
 		}
-		//fmt.Println(reflect.TypeOf(j))
 	}
+	return ifname_ip
+}
+
+func main() {
+	ifip := getIfnameIp()
+	fmt.Println(ifip)
 }
