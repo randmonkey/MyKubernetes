@@ -5,16 +5,27 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func getServerInfo() {
-	link := netlink.NewLinkAttrs()
-	link.Name = "enp0s10"
-	iflist, err := netlink.AddrList(nil, 4)
+func getServerInfo() (ifname string, err error) {
+	route, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
-		fmt.Println("fuck")
+		err = fmt.Errorf("Error get route, %v", err)
+		return
 	}
-	fmt.Println(iflist)
+	for _, r := range route {
+		if r.Dst == nil {
+			link, e := netlink.LinkByIndex(r.LinkIndex)
+			if e != nil {
+				err = fmt.Errorf("Error get link,%v", e)
+				return
+			}
+			ifname = link.Attrs().Name
+			break
+		}
+	}
+	return ifname, err
 }
 
 func main() {
-	getServerInfo()
+	a, _ := getServerInfo()
+	fmt.Println(a)
 }
