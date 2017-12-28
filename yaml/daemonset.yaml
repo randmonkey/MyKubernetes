@@ -1,0 +1,26 @@
+kind: DaemonSet
+apiVersion: extensions/v1beta1
+metadata:
+  name: network-test
+  namespace: yanshen
+  labels:
+    app: network-test
+spec:
+  selector:
+    matchLabels:
+      app: network-test
+  template:
+    metadata:
+      labels:
+        app: network-test
+    spec:
+      hostNetwork: true
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      imagePullSecrets:
+      - name: hub.qiniu.com
+      containers:
+        - name: nc-listen-port
+          image: reg.qiniu.com/u-1381168308-default/quagga:v1.2.2 # !!! need real image name when deploying
+          command: ["tail","-f","/dev/null"]
