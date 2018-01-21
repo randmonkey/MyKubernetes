@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	//"net/http"
 
 	"github.com/vishvananda/netlink"
@@ -10,12 +11,15 @@ import (
 //var data string = `node_bonding_active{master="bond10"} 1`
 
 func getNicStatus() {
-	link, err := netlink.LinkList()
+	links, err := netlink.LinkList()
 	if err != nil {
 		fmt.Errorf("Get link list err :", err.Error())
 	}
-	ifname := link.Attrs().Name
-	fmt.Println(ifname)
+	for _, link := range links {
+		if ok, _ := regexp.MatchString("bond0", link.Attrs().Name); ok {
+			fmt.Println(link.Attrs().Name)
+		}
+	}
 }
 
 // func handler(w http.ResponseWriter, r *http.Request) {
