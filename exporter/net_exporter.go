@@ -2,22 +2,30 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	//"net/http"
-
+	//"regexp"
 	"github.com/vishvananda/netlink"
+	"io/ioutil"
+	"path"
 )
 
 //var data string = `node_bonding_active{master="bond10"} 1`
 
 func getNicStatus() {
+	//var ifnames []string
 	links, err := netlink.LinkList()
 	if err != nil {
 		fmt.Errorf("Get link list err :", err.Error())
 	}
 	for _, link := range links {
-		if ok, _ := regexp.MatchString("bond0", link.Attrs().Name); ok {
-			fmt.Println(link.Attrs().Name)
+		if link.Type() == "bond" {
+			ifname := link.Attrs().Name
+			filename := path.Join("/sys/class/net/", ifname, "speed")
+			buf, err := ioutil.ReadFile(filename)
+			if err != nil {
+				fmt.Errorf("Error open bond speed file", err.Error())
+			}
+			fmt.Println(ifname, string(buf))
 		}
 	}
 }
