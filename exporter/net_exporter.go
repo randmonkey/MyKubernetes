@@ -6,11 +6,13 @@ import (
 	//"regexp"
 	"github.com/vishvananda/netlink"
 	"io/ioutil"
+	//"os"
 	"path"
 	"strings"
 )
 
-// var data string = `node_bonding_active{master="bond10"} 1`
+var data string = `bond_speed{name="__name__"} __speed__`
+var promefile string = "/opt/metric/bond_speed.prom"
 
 func getBondList() (ifname []string) {
 	links, err := netlink.LinkList()
@@ -35,6 +37,17 @@ func getBondSpeed(bond string) (speed string) {
 	return
 }
 
+func formatFileContent(bondList []string) (content string) {
+	for _, bond := range bondList {
+		speed := getBondSpeed(bond)
+		// fmt.Println(bond)
+		// fmt.Println(speed)
+		data = strings.Replace(data, "__name__", bond, -1)
+		data = strings.Replace(data, "__speed__", speed, -1)
+	}
+	return
+}
+
 // func handler(w http.ResponseWriter, r *http.Request) {
 // 	fmt.Fprintf(w, data)
 // }
@@ -43,10 +56,13 @@ func main() {
 	// http.HandleFunc("/", handler)
 	// http.ListenAndServe("0.0.0.0:9001", nil)
 	bondList := getBondList()
-	//fmt.Println(len(bondList))
-
-	for _, bond := range bondList {
-		speed := getBondSpeed(bond)
-		fmt.Println(bond, speed)
-	}
+	fmt.Println(bondList)
+	// file, err := os.OpenFile(promefile, os.O_CREATE|os.O_WRONLY, 0755)
+	// if err != nil {
+	// 	fmt.Errorf("Open/Create prometheus metric in /opt/metric file err :", err.Error())
+	// }
+	// //fmt.Println(file.Name())
+	// defer file.Close()
+	// file.WriteString(data)
+	fmt.Println(formatFileContent(bondList))
 }
