@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	//"net/http"
-	//"regexp"
 	"github.com/vishvananda/netlink"
 	"io/ioutil"
 	"os"
@@ -13,10 +11,11 @@ import (
 
 var promefile string = "/opt/metric/bond_speed.prom"
 
-func getBondList() (ifname []string) {
+func getBondList() (ifname []string, err error) {
 	links, err := netlink.LinkList()
 	if err != nil {
-		fmt.Errorf("Get link list err:", err.Error())
+		err = fmt.Errorf("get link error ", err.Error())
+		return
 	}
 	for _, link := range links {
 		if link.Type() == "bond" {
@@ -26,20 +25,25 @@ func getBondList() (ifname []string) {
 	return
 }
 
-func getBondSpeed(bond string) (speed string) {
+func getBondSpeed(bond string) (speed string, err error) {
 	filename := path.Join("/sys/class/net/", bond, "speed")
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Errorf("Error open bond speed file", err.Error())
+		err = fmt.Errorf("Error open bond speed file", err.Error())
+		return
 	}
 	speed = strings.Replace(string(buf), "\n", "", -1)
 	return
 }
 
-func formatFileContent(bondList []string) (content string) {
+func formatFileContent(bondList []string) (content string, err error) {
 	for _, bond := range bondList {
 		var data string = `bond_speed{name="__name__"} __speed__`
-		speed := getBondSpeed(bond)
+		speed, e := getBondSpeed(bond)
+		if e != nil {
+			err = fmt.Errorf("get bond speed err", e.Error())
+			return
+		}
 		data = strings.Replace(data, "__name__", bond, 1)
 		data = strings.Replace(data, "__speed__", speed, 1)
 		content = content + data + "\n"
@@ -47,18 +51,18 @@ func formatFileContent(bondList []string) (content string) {
 	return
 }
 
-// func handler(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Fprintf(w, data)
-// }
-
 func main() {
-	// http.HandleFunc("/", handler)
-	// http.ListenAndServe("0.0.0.0:9001", nil)
-	bondList := getBondList()
-	content := formatFileContent(bondList)
-	file, err := os.OpenFile(promefile, os.O_CREATE|os.O_WRONLY, 0755)
+	_, err := os.Stat("/opt/metric")
 	if err != nil {
-		fmt.Errorf("Open/Create prometheus metric in /opt/metric file err :", err.Error())
+		if os.IsNotExist(err) {
+			os.Mkdir("/opt/metric", 0777)
+		}
+	}
+	bondList, _ := getBondList()
+	content, _ := formatFileContent(bondList)
+	file, err := os.OpenFile(promefile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		fmt.Printf("can't open file prome", err)
 	}
 	defer file.Close()
 	file.WriteString(content)
