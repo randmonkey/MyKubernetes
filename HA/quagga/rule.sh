@@ -9,6 +9,16 @@ then
 echo "$[ _RULE_NO_ -1 ]       switch" >> /etc/iproute2/rt_tables
 fi
 
+if ! ip rule | grep -q switch
+then
+        ip rule add  from all to $_GATEWAY_ lookup switch
+fi
+
+if ! ip route show table switch | grep -q default
+then
+        ip route add 0.0.0.0/0 via $_GATEWAY_ dev $_NIC_NAME_ table switch
+fi
+
 if ! grep -q switch /etc/network/interfaces
 then
         sed -i "$_GW_NO_ a pre-down ip route del 0.0.0.0/0 via $_GATEWAY_ dev $_NIC_NAME_ table switch" /etc/network/interfaces
