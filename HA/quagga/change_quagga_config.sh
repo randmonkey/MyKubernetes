@@ -11,15 +11,5 @@ _OSPFD_IP_=$_ROUTER_ID_
 sed -i "s@_OSPFD_IP_@$_OSPFD_IP_@g" /etc/quagga/debian.conf
 sed -i "s@_NIC_NAME_@$_NIC_NAME_@g;s@_ROUTER_ID_@$_ROUTER_ID_@g;s@_GATEWAY_@$_GATEWAY_@g;s@_NEIGHBOR_@ $_NEIGHBOR_@g" /etc/quagga/ospfd.conf
 
-if ! ip rule | grep -q switch
-then
-	ip rule add  from all to $_GATEWAY_ lookup switch
-fi
-
-if ! ip route show table switch | grep -q default
-then
-	ip route add 0.0.0.0/0 via $_GATEWAY_ dev $_NIC_NAME_ table switch
-fi
-
 service quagga start
 tail -f /dev/null

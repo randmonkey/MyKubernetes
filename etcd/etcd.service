@@ -1,0 +1,22 @@
+[Unit]
+Description=Etcd Server
+After=network.target
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=notify
+WorkingDirectory=/opt/etcd/
+#EnvironmentFile=-/opt/etcd/etcd.conf
+User=root
+ExecStart=/bin/bash -c "GOMAXPROCS=$(nproc) /opt/etcd/etcd \
+--name=net1 \
+--listen-peer-urls=http://192.168.9.1:2380 \
+--advertise-client-urls=http://192.168.9.1:2379 \
+--initial-cluster-token=etcd-cluster-localk8s \
+--initial-cluster=net1=http://192.168.9.1:2380,net2=http://192.168.9.2:2380,net3=http://192.168.9.3:2380  \
+--initial-cluster-state=new \
+--listen-client-urls=http://192.168.9.1:2379,http://127.0.0.1:2379"
+Restart=on-failure
+LimitNOFILE=65536
+[Install]
+WantedBy=multi-user.target
