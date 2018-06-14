@@ -8,9 +8,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -63,6 +65,13 @@ var (
 		},
 		[]string{"host"},
 	)
+	sixCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "status6xxCounter",
+			Help: "domainname 6xx counter",
+		},
+		[]string{"host"},
+	)
 )
 
 func init() {
@@ -73,6 +82,7 @@ func init() {
 	prometheus.MustRegister(threeCounter)
 	prometheus.MustRegister(fourCounter)
 	prometheus.MustRegister(fiveCounter)
+	prometheus.MustRegister(sixCounter)
 }
 
 type logstr struct {
@@ -87,16 +97,22 @@ type log struct {
 	Host            string `json:"host"`
 }
 
-type counters struct {
-	tow            float64
-	three          float64
-	four           float64
-	five           float64
-	send_counter   float64
-	recive_counter float64
+type savefile struct {
+	Host counters `json:"host"`
 }
 
-func tailLog(ch chan log) {
+type counters struct {
+	Zero           float64 `json:"zero"`
+	Tow            float64 `json:"tow"`
+	Three          float64 `json:"three"`
+	Four           float64 `json:"four"`
+	Five           float64 `json:"five"`
+	Six            float64 `json:"six"`
+	Send_counter   float64 `json:"send_counter"`
+	Recive_counter float64 `json:"recive_counter"`
+}
+
+func getFile() (filepath string) {
 	var filename string
 	var path string = "/var/log/containers/"
 	dir, err := ioutil.ReadDir(path)
@@ -108,7 +124,12 @@ func tailLog(ch chan log) {
 			filename = v.Name()
 		}
 	}
-	filepath := path + filename
+	filepath = path + filename
+	return
+}
+
+func tailLog(ch chan log) {
+	filepath := getFile()
 	t, err := tail.TailFile(filepath, tail.Config{Follow: true})
 	if err != nil {
 		fmt.Println("error of tail access.log!", err.Error())
@@ -131,26 +152,77 @@ func tailLog(ch chan log) {
 	}
 }
 
+func addSaveDate(filepath string) {
+	date, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		fmt.Println("error of read save file")
+	}
+	var datemap map[string]counters
+	json.Unmarshal(date, &datemap)
+	for k, v := range datemap {
+		sendSizeCounter.With(prometheus.Labels{"host": k}).Add(v.Send_counter)
+		reciveSizeCounter.With(prometheus.Labels{"host": k}).Add(v.Recive_counter)
+		zeroCounter.With(prometheus.Labels{"host": k}).Add(v.Zero)
+		twoCounter.With(prometheus.Labels{"host": k}).Add(v.Tow)
+		threeCounter.With(prometheus.Labels{"host": k}).Add(v.Three)
+		fourCounter.With(prometheus.Labels{"host": k}).Add(v.Four)
+		fiveCounter.With(prometheus.Labels{"host": k}).Add(v.Five)
+		sixCounter.With(prometheus.Labels{"host": k}).Add(v.Six)
+	}
+}
+
 func counter(ch chan log) {
+	var path string = "/var/log/containers/"
+	var file string = "ingress-log-counter.json"
+	filepath := path + file
+	var metrics map[string]*counters
+	metrics = make(map[string]*counters)
+	if _, err := os.Stat(filepath); !os.IsNotExist(err) {
+		addSaveDate(filepath)
+	}
+	ticker := time.NewTicker(time.Second * 5)
+	go func() {
+		for _ = range ticker.C {
+			save, _ := json.Marshal(metrics)
+			err := ioutil.WriteFile(filepath, save, 0664)
+			if err != nil {
+				fmt.Println("err or write save file")
+			}
+		}
+	}()
 	for l := range ch {
-		sendsize, _ := strconv.ParseFloat(l.Sent_bytes, 64)
+		if metrics[l.Host] == nil {
+			var p *counters = new(counters)
+			metrics[l.Host] = p
+		}
+		sendsize, _ := strconv.ParseFloat(l.Sent_bytes_body, 64)
 		recivesize, _ := strconv.ParseFloat(l.Request_length, 64)
 		sendSizeCounter.With(prometheus.Labels{"host": l.Host}).Add(sendsize)
+		metrics[l.Host].Send_counter = metrics[l.Host].Send_counter + sendsize
 		reciveSizeCounter.With(prometheus.Labels{"host": l.Host}).Add(recivesize)
+		metrics[l.Host].Recive_counter = metrics[l.Host].Recive_counter + recivesize
 		s := string([]byte(l.Status)[:1])
 		switch s {
 		case "0":
 			zeroCounter.With(prometheus.Labels{"host": l.Host}).Add(1)
+			metrics[l.Host].Zero++
 		case "2":
 			twoCounter.With(prometheus.Labels{"host": l.Host}).Add(1)
+			metrics[l.Host].Tow++
 		case "3":
 			threeCounter.With(prometheus.Labels{"host": l.Host}).Add(1)
+			metrics[l.Host].Three++
 		case "4":
 			fourCounter.With(prometheus.Labels{"host": l.Host}).Add(1)
+			metrics[l.Host].Four++
 		case "5":
 			fiveCounter.With(prometheus.Labels{"host": l.Host}).Add(1)
+			metrics[l.Host].Five++
+		case "6":
+			fiveCounter.With(prometheus.Labels{"host": l.Host}).Add(1)
+			metrics[l.Host].Six++
 		default:
-			fmt.Println("error http code", l.Status)
+			fmt.Println("Unknow http code", l.Status)
 		}
 	}
 }
