@@ -1,0 +1,5 @@
+package gotest
+
+import (
+	"testing"
+)
