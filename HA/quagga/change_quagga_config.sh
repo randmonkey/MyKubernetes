@@ -2,9 +2,9 @@
 #ospfd.conf
 _NIC_NAME_=`ip route | grep default | awk '{print $5}'`
 _GATEWAY_=`ip route | grep default | awk '{print $3}'`
-_ROUTER_ID_=`ip addr show $_NIC_NAME_ | grep -w inet | awk '{print $2}' | awk -F "/" '{print $1}'`
-_NETWORK_CIDR_=(`ip addr show lo | grep -w inet | awk '{print $2}' | awk -F "/" '{print $1}'`)
-_NEIGHBOR_=`ip route | grep $_NIC_NAME_ | grep kernel | awk '{print $1}'`
+_GATEWAY_CIDR_=(`echo $_GATEWAY_ | awk -F "." '{print $1"."$2"."$3}'`)
+_ROUTER_ID_=`ip addr show $_NIC_NAME_ | grep $_GATEWAY_CIDR_ | awk '{print $2}' | awk -F "/" '{print $1}'`
+_NEIGHBOR_=`ip route | grep kernel  | grep $_GATEWAY_CIDR_ | awk '{print $1}'`
 #debian.conf
 _OSPFD_IP_=$_ROUTER_ID_
 
