@@ -3,9 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hpcloud/tail"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -13,6 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hpcloud/tail"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -23,10 +24,10 @@ var (
 		},
 		[]string{"host"},
 	)
-	reciveSizeCounter = prometheus.NewCounterVec(
+	receiveSizeCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "reciveSizeCounter",
-			Help: "domainname recive size counter",
+			Name: "receiveSizeCounter",
+			Help: "domainname receive size counter",
 		},
 		[]string{"host"},
 	)
@@ -76,7 +77,7 @@ var (
 
 func init() {
 	prometheus.MustRegister(sendSizeCounter)
-	prometheus.MustRegister(reciveSizeCounter)
+	prometheus.MustRegister(receiveSizeCounter)
 	prometheus.MustRegister(zeroCounter)
 	prometheus.MustRegister(twoCounter)
 	prometheus.MustRegister(threeCounter)
@@ -102,14 +103,14 @@ type savefile struct {
 }
 
 type counters struct {
-	Zero           float64 `json:"zero"`
-	Tow            float64 `json:"tow"`
-	Three          float64 `json:"three"`
-	Four           float64 `json:"four"`
-	Five           float64 `json:"five"`
-	Six            float64 `json:"six"`
-	Send_counter   float64 `json:"send_counter"`
-	Recive_counter float64 `json:"recive_counter"`
+	Zero            float64 `json:"zero"`
+	Tow             float64 `json:"tow"`
+	Three           float64 `json:"three"`
+	Four            float64 `json:"four"`
+	Five            float64 `json:"five"`
+	Six             float64 `json:"six"`
+	Send_counter    float64 `json:"send_counter"`
+	Receive_counter float64 `json:"receive_counter"`
 }
 
 func getFile() (filepath string) {
@@ -161,7 +162,7 @@ func addSaveDate(filepath string) {
 	json.Unmarshal(date, &datemap)
 	for k, v := range datemap {
 		sendSizeCounter.With(prometheus.Labels{"host": k}).Add(v.Send_counter)
-		reciveSizeCounter.With(prometheus.Labels{"host": k}).Add(v.Recive_counter)
+		receiveSizeCounter.With(prometheus.Labels{"host": k}).Add(v.Receive_counter)
 		zeroCounter.With(prometheus.Labels{"host": k}).Add(v.Zero)
 		twoCounter.With(prometheus.Labels{"host": k}).Add(v.Tow)
 		threeCounter.With(prometheus.Labels{"host": k}).Add(v.Three)
@@ -186,7 +187,7 @@ func counter(ch chan log) {
 			save, _ := json.Marshal(metrics)
 			err := ioutil.WriteFile(filepath, save, 0664)
 			if err != nil {
-				fmt.Println("err or write save file")
+				fmt.Println("err or write save file", err.Error())
 			}
 		}
 	}()
@@ -196,11 +197,11 @@ func counter(ch chan log) {
 			metrics[l.Host] = p
 		}
 		sendsize, _ := strconv.ParseFloat(l.Sent_bytes_body, 64)
-		recivesize, _ := strconv.ParseFloat(l.Request_length, 64)
+		receivesize, _ := strconv.ParseFloat(l.Request_length, 64)
 		sendSizeCounter.With(prometheus.Labels{"host": l.Host}).Add(sendsize)
 		metrics[l.Host].Send_counter = metrics[l.Host].Send_counter + sendsize
-		reciveSizeCounter.With(prometheus.Labels{"host": l.Host}).Add(recivesize)
-		metrics[l.Host].Recive_counter = metrics[l.Host].Recive_counter + recivesize
+		receiveSizeCounter.With(prometheus.Labels{"host": l.Host}).Add(receivesize)
+		metrics[l.Host].Receive_counter = metrics[l.Host].Receive_counter + receivesize
 		s := string([]byte(l.Status)[:1])
 		switch s {
 		case "0":
