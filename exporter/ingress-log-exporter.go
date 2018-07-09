@@ -121,11 +121,12 @@ func getFile() (filepath string) {
 		fmt.Println("error of read log directory")
 	}
 	for _, v := range dir {
-		if j, _ := regexp.MatchString("nginx-ingress-controller-(.*)log", v.Name()); j {
+		if j, _ := regexp.MatchString("(.*)-ingress-controller(.*)log", v.Name()); j {
 			filename = v.Name()
 		}
 	}
 	filepath = path + filename
+	fmt.Println(filepath)
 	return
 }
 
