@@ -126,7 +126,6 @@ func getFile() (filepath string) {
 		}
 	}
 	filepath = path + filename
-	fmt.Println(filepath)
 	return
 }
 
