@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hpcloud/tail"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -131,7 +132,7 @@ func getFile() (filepath string) {
 
 func tailLog(ch chan log) {
 	filepath := getFile()
-	t, err := tail.TailFile(filepath, tail.Config{Follow: true})
+	t, err := tail.TailFile(filepath, tail.Config{Follow: true, ReOpen: true})
 	if err != nil {
 		fmt.Println("error of tail access.log!", err.Error())
 	}
