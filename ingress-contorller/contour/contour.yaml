@@ -37,14 +37,14 @@ spec:
       imagePullSecrets:
       - name: hub.qiniu.com
       containers:
-      - image: reg.qiniu.com/u-1381168308-default/contour:v0.1
+      - image: reg.qiniu.com/u-1381168308-default/contour:v0.4
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
           name: contour
         name: contour
         command: ["contour"]
-        args: ["serve", "--incluster"]
+        args: ["serve", "--incluster", "--envoy-http-port=80", "--envoy-https-port=443"]
       - image: reg.qiniu.com/u-1381168308-default/envoy-alpine:v1.6.0
         name: envoy
         ports:
@@ -58,17 +58,24 @@ spec:
         - name: contour-config
           mountPath: /config
       initContainers:
-      - image: reg.qiniu.com/u-1381168308-default/contour:v0.1
+      - image: reg.qiniu.com/u-1381168308-default/contour:v0.4
         imagePullPolicy: Always
         name: envoy-initconfig
         command: ["contour"]
-        args: ["bootstrap", "/config/contour.yaml"]
+        args: ["bootstrap", "/config/contour.yaml", "--statsd-enabled"]
         volumeMounts:
         - name: contour-config
           mountPath: /config
+#        volumeMounts:
+#        - mountPath: /config/envoy.yaml
+#          name: envoy-config
+#          readOnly: true
       volumes:
       - name: contour-config
         emptyDir: {}
+#      - configMap:
+#          name: envoy-config
+#        name: envoy-config
       dnsPolicy: ClusterFirst
       serviceAccountName: contour
       terminationGracePeriodSeconds: 30
