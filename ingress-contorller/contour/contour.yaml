@@ -26,10 +26,10 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: qiniu.com/nuke-role
+              - key: ingress.kirkcloud.com/class
                 operator: In
                 values:
-                - NETWORK
+                - envoy
       tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/master
@@ -66,16 +66,9 @@ spec:
         volumeMounts:
         - name: contour-config
           mountPath: /config
-#        volumeMounts:
-#        - mountPath: /config/envoy.yaml
-#          name: envoy-config
-#          readOnly: true
       volumes:
       - name: contour-config
         emptyDir: {}
-#      - configMap:
-#          name: envoy-config
-#        name: envoy-config
       dnsPolicy: ClusterFirst
       serviceAccountName: contour
       terminationGracePeriodSeconds: 30
