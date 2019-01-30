@@ -20,10 +20,6 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: ingress.kirkcloud.com/class
-                operator: In
-                values:
-                - public
               - key: node-role.kubernetes.io/ingress
                 operator: In
                 values:
