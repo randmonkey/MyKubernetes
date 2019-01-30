@@ -1,0 +1,43 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: ping-probe
+  name: ping-probe
+  namespace: yanshen
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ping-probe
+  template:
+    metadata:
+      labels:
+        app: ping-probe
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/ingress
+                operator: In
+                values:
+                - envoy
+      containers:
+      - args:
+        command:
+        - ping-probe
+        env:
+          - name: IPLIST
+            value: "10.69.149.9 10.1.48.151 10.69.11.3"
+        image: reg.qiniu.com/kirk-network/ping-probe:v0.1
+        imagePullPolicy: Always
+        name: ping-probe
+        resources:
+          limits:
+            memory: 1Gi
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      imagePullSecrets:
+      - name: hub.qiniu.com
