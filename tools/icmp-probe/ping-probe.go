@@ -35,6 +35,6 @@ func doPing(target string) {
 	pinger.Run()
 	stats := pinger.Statistics()
 	if stats.PacketLoss != 0 {
-		fmt.Println(time.Now().Format("2006-01-02T15:04:05Z07:00"), stats.Addr, stats.PacketsSent, stats.PacketsRecv)
+		fmt.Println(time.Now().Format("2006-01-02T15:04:05Z07:00"), stats.Addr, stats.PacketsSent, stats.PacketsRecv, stats.MaxRtt)
 	}
 }
