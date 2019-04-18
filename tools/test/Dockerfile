@@ -6,4 +6,4 @@ RUN rm /etc/apt/sources.list && \
     apt-get install -y tcpdump && \
     apt-get clean
 
-COPY ./tcp-server /usr/bin/
+COPY ./* /usr/bin/
