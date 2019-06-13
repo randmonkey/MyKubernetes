@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app: localstatu
+  name: localstatus
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: localstatus
+  namespace: localstatus
+  labels:
+    app: localstatus
+spec:
+  template:
+    metadata:
+      name: localstatus
+      labels:
+        app: localstatus
+    spec:
+      containers:
+      - name: localstatus
+        image: reg.kpaas.io/localstatus:v0.1
+        command: ["/usr/bin/localstatus"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: localstatus
+  name: localstatus
+  namespace: localstatus
+spec:
+  ports:
+  - name: localstatus
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: localstatus
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+#  annotations:
+#    contour.heptio.com/request-timeout: 3600s
+#    contour.heptio.com/websocket-routes: /
+#    ingress.kubernetes.io/proxy-body-size: "0"
+  name: localstatus 
+  namespace: localstatus
+spec:
+  rules:
+  - host: www.yanshen.me 
+    http:
+      paths:
+      - backend:
+          serviceName: localstatus
+          servicePort: 80 
+        path: /
