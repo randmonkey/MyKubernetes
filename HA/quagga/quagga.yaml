@@ -1,26 +1,64 @@
+apiVersion: v1
+data:
+  ospfd.conf: "hostname ospfd\n\rpassword zebra\n\rlog file /var/log/quagga/ospfd.log\n\rlog stdout\n\r!\n\rinterface eth2\n\r  ip ospf network non-broadcast\n\r ip ospf hello-interval 30\n\r ip ospf dead-interval 120\n\r!\n\rrouter ospf\n\r ospf router-id 192.168.167.24\n\r redistribute connected metric-type 1 route-map import-lo\n\r network 192.168.167.0/24 area 0.0.0.0\n\r neighbor 192.168.167.254\n\r!\n\rroute-map import-lo deny 10\n\r match ip address prefix-list 127.0.0.0/8\n\r!\n\rroute-map import-lo permit 15\n\r match interface lo\n\r!\n\rline vty\n\r!"
+kind: ConfigMap
+metadata:
+  name: quagga-ospf-cfg
+  namespace: kube-system
+
+---
+
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
-  name: quagga
-  namespace: kube-system
   labels:
     k8s-app: quagga
+  name: quagga
+  namespace: kube-system
 spec:
+  selector:
+    matchLabels:
+      k8s-app: quagga
   template:
     metadata:
-      name: quagga
       labels:
         k8s-app: quagga
+      name: quagga
     spec:
-      nodeSelector:
-        _NODE_LABEL_: _LABEL_ 
-      hostNetwork: true
-      imagePullSecrets:
-      - name: _SECRETS_ 
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: qiniu.com/calico-tlb-role
+                operator: In
+                values:
+                - director
       containers:
-      - name: quagga
-        image: _YOUR_REPO_/quagga:v0.1
+      - args:
+        - /etc/quagga/change_quagga_config.sh
+        command:
+        - /bin/bash
+        image: reg.kpaas.io/kpaas/quagga:v1.3.3
+        imagePullPolicy: IfNotPresent
+        name: quagga
         securityContext:
           privileged: true
-        command: ["/bin/bash"]
-        args: ["/etc/quagga/change_quagga_config.sh"]
+        volumeMounts:
+        - mountPath: /etc/quagga/ospf-cfg/
+          name: quagga-ospf-cfg
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      restartPolicy: Always
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: quagga-ospf-cfg
+        name: quagga-ospf-cfg
+      tolerations:
+      - effect: NoSchedule
+        key: dedicated
+        operator: Equal
+        value: calico-tlb-director
+  updateStrategy:
+    type: OnDelete
