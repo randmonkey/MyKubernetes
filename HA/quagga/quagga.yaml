@@ -1,6 +1,8 @@
 apiVersion: v1
 data:
-  nic_name: "bond2" # 填写需要与交换机建立ospf邻居的网卡名称，使用默认路由所在网卡时填写空字符串 "" 
+  nic_name: "bond2" # 填写需要与交换机建立ospf邻居的网卡名称，使用默认路由所在网卡时填写空字符串 ""
+  gateway: "192.168.0.1" # 填写交换机地址，不填将自动探查
+  neighbor_network: "192.168.0.0/24" # 填写网络的CIDR
 kind: ConfigMap
 metadata:
   name: quagga-ospf-cfg
@@ -39,8 +41,24 @@ spec:
         - /etc/quagga/change_quagga_config.sh
         command:
         - /bin/bash
-        image: reg.kpaas.io/kpaas/quagga:v1.3.4
-        imagePullPolicy: IfNotPresent
+        env:
+          - name: _NIC_NAME_
+            valueFrom:
+              configMapKeyRef:
+                 name: quagga-ospf-cfg
+                 key: nic_name
+          - name: _GATEWAY_
+            valueFrom:
+              configMapKeyRef:
+                 name: quagga-ospf-cfg
+                 key: gateway
+          - name: _NEIGHBOR_
+            valueFrom:
+              configMapKeyRef:
+                 name: quagga-ospf-cfg
+                 key: neighbor_network           
+        image: reg.kpaas.io/kpaas/quagga:v1.3.6
+        imagePullPolicy: Always
         name: quagga
         securityContext:
           privileged: true
